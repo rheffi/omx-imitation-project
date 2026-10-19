@@ -1,0 +1,22 @@
+# Credentials and machine-local configuration
+.env
+.env.*
+!.env.example
+*token*
+stored_tokens
+.cache/
+# Environments and generated training/data artifacts
+.venv/
+venv/
+lerobot/
+datasets/
+outputs/
+checkpoints/
+wandb/
+*.mp4
+*.parquet
+*.pt
+*.pth
+*.safetensors
+__pycache__/
+*.py[cod]
