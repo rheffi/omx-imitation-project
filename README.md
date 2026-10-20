@@ -821,7 +821,9 @@ lerobot-train \
 └── 100000/pretrained_model/
 ```
 
-`pretrained_model`에는 가중치 하나만 넣지 않고 `config.json`, `model.safetensors`, `train_config.json`, 전처리·후처리 JSON과 각각의 정규화 가중치까지 **7개 파일**을 함께 둔다. 현재까지 정리·검증한 모델은 1만·4만·5만·7만·8만 스텝이다. 7만·8만 모델은 각각 `070000/pretrained_model`, `080000/pretrained_model`에 보관했으며, 두 모델의 7개 파일·프로세서 참조·가중치 형식을 확인했다. 두 모델의 가중치는 서로 다르고, 원본 ZIP은 다운로드 폴더에 유지한다. 이 문서 수정에서 다른 모델의 다운로드나 검증, 팔 실행을 완료한 것으로 표시하지 않는다.
+`pretrained_model`에는 가중치 하나만 넣지 않고 `config.json`, `model.safetensors`, `train_config.json`, 전처리·후처리 JSON과 각각의 정규화 가중치까지 **7개 파일**을 함께 둔다. 현재까지 정리·검증한 모델은 1만·4만·5만·6만·7만·8만 스텝이다. 7만·8만 모델은 각각 `070000/pretrained_model`, `080000/pretrained_model`에 보관했으며, 두 모델의 7개 파일·프로세서 참조·가중치 형식을 확인했다. 두 모델의 가중치는 서로 다르고, 원본 ZIP은 다운로드 폴더에 유지한다. 이 문서 수정에서 다른 모델의 다운로드나 검증, 팔 실행을 완료한 것으로 표시하지 않는다.
+
+`STEP_PAD`는 실제 압축 해제가 끝난 폴더의 6자리 값이어야 한다. 다운로드 폴더에 ZIP만 있는 상태는 실행 준비가 끝난 것이 아니다. 없는 로컬 경로를 넣으면 모델 로더가 이를 HF 저장소 ID로 해석해 `HFValidationError`와 마지막 `RecordConfig` 오류를 낼 수 있다. 6만 스텝은 `060000/pretrained_model`에 정리했고 CUDA 설정 읽기까지 확인했다.
 
 ### 비교 전에 카메라와 물건 배치 고정
 
