@@ -10,11 +10,13 @@ GitHub: https://github.com/rheffi/omx-imitation-project (비공개). 이 저장�
 
 장치 확인 및 설정 갱신: 2026-10-19
 
-현재 왼쪽 본 데이터 `chun-hwan/omx-unload-left-v1`은 로컬에 66에피소드·37,012프레임으로 저장됐다. 이 데이터로 왼쪽 ACT 모델을 먼저 시험 학습한다. HF에도 66개가 반영됐는지 확인한 뒤 5090 PC에서 실행한다. 오른쪽 수집과 두 모델의 실제 평가는 별도 진행한다.
+기존 왼쪽 v1 데이터 `chun-hwan/omx-unload-left-v1`은 66에피소드·37,012프레임이다. 현재는 v1의 10만 스텝 모델을 한 번 확인한 뒤, 높은 물체 1종을 제외한 8종으로 왼쪽 시연을 새로 수집한다. 새 수집은 `left-v2`로 구분하고 기존 데이터·모델은 보관한다. 바로 할 작업은 아래 0절을 따른다.
 
 실행 명령은 부분 옵션 대신 복붙할 수 있는 전체 블록으로 적었다. 녹화·실제 팔 평가 블록에는 현재 PC의 가상환경 활성화와 장치값을 포함했다. 5090 PC용 학습 블록은 해당 PC의 학습용 가상환경을 활성화한 뒤 실행한다. 명령 블록은 필요한 것 하나를 골라 실행한다.
 
 바로 실행할 명령 위치:
+
+- [현재 진행 — 10만 스텝 1회 확인·8종 재녹화](#0-현재-진행--10만-스텝-1회-확인과-8종-재녹화)
 
 - [중단 후 녹화 재개·추가 수집](#11-데이터-확인과-추가-녹화)
 - [현재 왼쪽 66개로 첫 학습](#12-왼쪽-act-모델-학습--rtx-5090-pc)
@@ -23,7 +25,7 @@ GitHub: https://github.com/rheffi/omx-imitation-project (비공개). 이 저장�
 
 현재 수집 기준:
 
-- 물건은 총 9종류이며, 한 카트에는 그중 3개를 싣는다.
+- 기존 v1은 9종류였다. 재녹화 v2는 높은 물체 1종을 제외한 8종류 중 3개를 카트에 싣는다.
 - 시험 녹화 3에피소드에서 두 카메라와 3→2→1→0 흐름을 확인했다.
 - 기본 첫 수집 목표는 방향별 60에피소드이며, 현재 왼쪽은 66개로 첫 학습을 시도한다. 지금 추가 수집을 시작하라는 뜻은 아니다.
 - 평가 후 필요하면 방향별 누적 99개까지 보강한다. 현재 왼쪽 66개 기준 추가 33개이고, 60개를 모은 방향은 추가 39개다. 성공 시연 검수 후 실제 학습용 개수는 달라질 수 있다.
@@ -33,6 +35,119 @@ GitHub: https://github.com/rheffi/omx-imitation-project (비공개). 이 저장�
 학습은 별도의 RTX 5090 PC에서 실행한다. 현재 OMX 연결 PC는 원격조종·녹화·실제 팔 평가에 사용한다. 이 문서의 학습 명령은 5090 PC용이고, 장치 포트·카메라 설정과 평가 명령은 현재 OMX 연결 PC용이다.
 
 명령은 강의자료와 현재 PC의 `/home/team2/il_ws/src/lerobot` 소스를 확인해 정리했다. 리더암·서브암의 장치 경로, 기존 보정 파일의 ID, 모터 읽기 통신, 외장 카메라 2대의 경로와 영상 수신을 확인해 공통 설정에 반영했다. 손목을 초기 자세로 정렬한 뒤 사용자가 원격조종 정상 동작을 확인했다. 실제 집기 중 카메라 구도와 데이터 품질은 시험 녹화에서 확인한다. 최신 인터넷 예제를 따라 패키지를 일괄 업그레이드하지 않고 강의에서 사용한 환경을 유지한다.
+
+## 0. 현재 진행 — 10만 스텝 1회 확인과 8종 재녹화
+
+### 확인한 증상과 진행 순서
+
+사용자 시험에서 물체 바로 위 허공에서 그리퍼를 닫아 집지 못하는 동작을 관찰했다. 높이가 큰 물체 1종이 영향을 줬는지는 아직 확정하지 않았다. 이번에는 해당 물체를 제외하고 수집 조건을 줄여 다시 시연하기로 했다. 기존 데이터에서 일부 에피소드를 자동 삭제하거나 기존 모델을 덮어쓰지는 않는다.
+
+1. 아래 명령으로 기존 v1 **10만 스텝 모델을 1에피소드·30초만** 확인한다. 물건을 3개 올려도 한 번의 이동을 확인하는 시험이다.
+2. 높은 물체 1종을 제외하고 남은 8종을 정한다. 카트당 3개, 한 개 집기 → 왼쪽 바구니에 놓기 → 대기 자세 복귀 범위는 유지한다.
+3. 카메라·카트·바구니·대기 자세를 고정하고, 8절의 전체 시험 녹화 명령으로 먼저 3→2→1→0 시연을 확인한다.
+4. 집게가 물체를 실제로 잡을 높이까지 내려간 뒤 닫는 성공 시연을 수집한다. 헛집기·낙하·미완료 시연은 취소하고 다시 찍는다.
+5. 새 왼쪽 데이터 `chun-hwan/omx-unload-left-v2`에 우선 60에피소드·20카트를 새로 수집한다. 8종을 각각 약 7~8회 옮기며, 같은 물건만 항상 마지막에 남지 않게 조합과 배치를 바꾼다.
+6. 새 데이터의 영상·성공 시연·저장 개수와 HF 업로드를 확인한 뒤 14절의 왼쪽 v2 명령으로 새 학습을 시작한다. 기존 v1 학습 재개 명령과 구분한다.
+
+아래 1~13절과 15절의 전체 체크포인트 비교표에는 기존 v1의 9종·66개 기준이 남아 있다. **지금 재녹화할 때는 이 0절의 v2 명령을 사용한다.** 기존 9종 균등 배분·v1 추가 수집 명령을 새 v2 수집에 사용하지 않는다. 오른쪽 수집·재학습은 별도 진행한다.
+
+### 지금 실행 — 기존 v1 10만 스텝 한 번 확인
+
+모델은 `/home/team2/omx_models/omx_left_act_v1/100000/pretrained_model`에 정리했다. 원본 ZIP은 유지한다. 아래는 실제 팔을 움직이는 평가 명령이며, 이 문서 정리 과정에서는 실행하지 않았다. 완료·빈 카트 감지 없이 30초 뒤 종료하고, 평가 영상은 시각이 붙은 별도 로컬 데이터셋에 저장한다.
+
+```bash
+source /home/team2/venv/il/bin/activate
+cd /home/team2/il_ws/src/lerobot
+
+STEP_PAD="100000"  # 실행할 모델의 스텝: 아래 표의 6자리 값으로 변경
+lerobot-record \
+  --robot.type=omx_follower \
+  --robot.port=/dev/omx_follower \
+  --robot.id=omx_follower_arm \
+  --robot.cameras='{ front: {type: opencv, index_or_path: "/dev/v4l/by-id/usb-HFSD-231214-J_SNAP_U2-video-index0", width: 640, height: 480, fps: 30, fourcc: MJPG}, wrist: {type: opencv, index_or_path: "/dev/v4l/by-id/usb-Innomaker_Innomaker-U20CAM-720P_SN0001-video-index0", width: 640, height: 480, fps: 30, fourcc: MJPG}}' \
+  --policy.path="/home/team2/omx_models/omx_left_act_v1/${STEP_PAD}/pretrained_model" \
+  --policy.device=cuda \
+  --display_data=true \
+  --dataset.repo_id="chun-hwan/eval_omx_left_s${STEP_PAD}_single_$(date +%Y%m%d_%H%M%S)" \
+  --dataset.single_task="Move one item from the cart to the left basket and return to the waiting pose." \
+  --dataset.fps=30 \
+  --dataset.num_episodes=1 \
+  --dataset.episode_time_s=30 \
+  --dataset.reset_time_s=0 \
+  --dataset.push_to_hub=false \
+  --dataset.private=true
+```
+
+10만 스텝 1회 결과: **미기록**. 결과를 확인한 뒤 재녹화를 진행한다.
+
+### 새 왼쪽 v2 본 녹화 — 처음 시작할 때
+
+첫 수집에서만 아래 블록을 사용한다. 기존 v1에 이어 붙이지 않고 새 v2를 만든다. 중단 후에는 다음 재개 블록을 쓴다. 평가의 자동 진행과 달리 **시연 녹화에는 준비 시간 60초를 유지**한다. 한 개를 옮기고 대기 자세로 복귀하면 `→`, 다음 장면이 준비됐으면 준비 단계에서 `→`를 짧게 한 번 눌러 시작한다. 저장·인코딩 중에는 키를 누르지 않는다.
+
+```bash
+source /home/team2/venv/il/bin/activate
+cd /home/team2/il_ws/src/lerobot
+
+lerobot-record \
+  --robot.type=omx_follower \
+  --robot.port=/dev/omx_follower \
+  --robot.id=omx_follower_arm \
+  --robot.cameras='{ front: {type: opencv, index_or_path: "/dev/v4l/by-id/usb-HFSD-231214-J_SNAP_U2-video-index0", width: 640, height: 480, fps: 30, fourcc: MJPG}, wrist: {type: opencv, index_or_path: "/dev/v4l/by-id/usb-Innomaker_Innomaker-U20CAM-720P_SN0001-video-index0", width: 640, height: 480, fps: 30, fourcc: MJPG}}' \
+  --teleop.type=omx_leader \
+  --teleop.port=/dev/omx_leader \
+  --teleop.id=omx_leader_arm \
+  --display_data=true \
+  --dataset.repo_id=chun-hwan/omx-unload-left-v2 \
+  --dataset.single_task="Move one item from the cart to the left basket and return to the waiting pose." \
+  --dataset.fps=30 \
+  --dataset.num_episodes=60 \
+  --dataset.episode_time_s=30 \
+  --dataset.reset_time_s=60 \
+  --dataset.push_to_hub=true \
+  --dataset.private=true
+```
+
+### 새 왼쪽 v2 녹화 재개 — 저장된 개수부터 60개까지
+
+아래 명령은 v2의 실제 저장 개수를 읽어 남은 수량만 추가한다. v2를 아직 시작하지 않았다면 위 신규 수집 명령부터 사용한다. 실패 시연을 취소·재녹화했다면 실제 정상 저장된 개수로 센다.
+
+```bash
+source /home/team2/venv/il/bin/activate
+cd /home/team2/il_ws/src/lerobot
+
+TARGET_EPISODES=60
+CURRENT_EPISODES=$(python - <<'COUNT'
+import json
+from lerobot.utils.constants import HF_LEROBOT_HOME
+p = HF_LEROBOT_HOME / "chun-hwan" / "omx-unload-left-v2" / "meta/info.json"
+print(json.loads(p.read_text())["total_episodes"])
+COUNT
+) &&
+REMAINING_EPISODES=$((TARGET_EPISODES - CURRENT_EPISODES)) &&
+if [ "$REMAINING_EPISODES" -gt 0 ]; then
+  echo "현재 ${CURRENT_EPISODES}개 → ${REMAINING_EPISODES}개 추가 → 목표 ${TARGET_EPISODES}개"
+  lerobot-record \
+    --resume=true \
+    --robot.type=omx_follower \
+    --robot.port=/dev/omx_follower \
+    --robot.id=omx_follower_arm \
+    --robot.cameras='{ front: {type: opencv, index_or_path: "/dev/v4l/by-id/usb-HFSD-231214-J_SNAP_U2-video-index0", width: 640, height: 480, fps: 30, fourcc: MJPG}, wrist: {type: opencv, index_or_path: "/dev/v4l/by-id/usb-Innomaker_Innomaker-U20CAM-720P_SN0001-video-index0", width: 640, height: 480, fps: 30, fourcc: MJPG}}' \
+    --teleop.type=omx_leader \
+    --teleop.port=/dev/omx_leader \
+    --teleop.id=omx_leader_arm \
+    --display_data=true \
+    --dataset.repo_id=chun-hwan/omx-unload-left-v2 \
+    --dataset.single_task="Move one item from the cart to the left basket and return to the waiting pose." \
+    --dataset.fps=30 \
+    --dataset.num_episodes="$REMAINING_EPISODES" \
+    --dataset.episode_time_s=30 \
+    --dataset.reset_time_s=60 \
+    --dataset.push_to_hub=true \
+    --dataset.private=true
+else
+  echo "이미 ${CURRENT_EPISODES}개 저장됨. 목표 ${TARGET_EPISODES}개까지 추가할 녹화 없음."
+fi
+```
 
 ## 1. 만들려는 동작
 
@@ -204,7 +319,8 @@ MODEL_VERSION='v1'
 | 용도 | HF 저장소 ID |
 |---|---|
 | 반복 시험 녹화 | `chun-hwan/omx-unload-left-pilot` (매번 초기화 후 재사용) |
-| 왼쪽 본 녹화 | `chun-hwan/omx-unload-left-v1` |
+| 기존 왼쪽 본 녹화 | `chun-hwan/omx-unload-left-v1` |
+| 높은 물체 제외 후 왼쪽 재녹화 | `chun-hwan/omx-unload-left-v2` |
 | 오른쪽 본 녹화 | `chun-hwan/omx-unload-right-v1` |
 | 왼쪽 학습 모델 | `chun-hwan/omx-unload-left-act-v1` |
 | 오른쪽 학습 모델 | `chun-hwan/omx-unload-right-act-v1` |
@@ -745,13 +861,16 @@ lerobot-train \
   --resume=true
 ```
 
-### 시연 보강 후 새 모델 학습 — 왼쪽 v2
+### 높은 물체 제외 후 새 데이터로 학습 — 왼쪽 v2
 
-첫 모델 평가 후 필요할 때만 실행한다. 예를 들어 왼쪽 66개에 33개를 더해 99개가 됐다면 v1을 남기고 v2를 새로 학습한다. 새 데이터를 쓴 재학습은 이전 실행의 중단 재개와 구분한다. HF 업로드 완료 후 실행한다.
+0절의 8종 재녹화 데이터 `chun-hwan/omx-unload-left-v2`만 사용해 새로 학습한다. 기존 v1 데이터 66개를 자동으로 합치지 않는다. 새 데이터의 성공 시연·저장 개수와 HF 업로드를 확인한 뒤 5090 PC에서 아래 블록 전체를 실행한다. 기존 학습을 이어가는 `--resume=true`는 사용하지 않는다.
 
 ```bash
+source "$HOME/venv/omx_train/bin/activate"
+cd "$HOME/omx_imitation_training/lerobot"
+
 lerobot-train \
-  --dataset.repo_id=chun-hwan/omx-unload-left-v1 \
+  --dataset.repo_id=chun-hwan/omx-unload-left-v2 \
   --policy.type=act \
   --policy.device=cuda \
   --policy.repo_id=chun-hwan/omx-unload-left-act-v2 \
@@ -821,7 +940,7 @@ lerobot-train \
 └── 100000/pretrained_model/
 ```
 
-`pretrained_model`에는 가중치 하나만 넣지 않고 `config.json`, `model.safetensors`, `train_config.json`, 전처리·후처리 JSON과 각각의 정규화 가중치까지 **7개 파일**을 함께 둔다. 현재까지 정리·검증한 모델은 1만·4만·5만·6만·7만·8만 스텝이다. 7만·8만 모델은 각각 `070000/pretrained_model`, `080000/pretrained_model`에 보관했으며, 두 모델의 7개 파일·프로세서 참조·가중치 형식을 확인했다. 두 모델의 가중치는 서로 다르고, 원본 ZIP은 다운로드 폴더에 유지한다. 이 문서 수정에서 다른 모델의 다운로드나 검증, 팔 실행을 완료한 것으로 표시하지 않는다.
+`pretrained_model`에는 가중치 하나만 넣지 않고 `config.json`, `model.safetensors`, `train_config.json`, 전처리·후처리 JSON과 각각의 정규화 가중치까지 **7개 파일**을 함께 둔다. 현재까지 정리·검증한 모델은 1만·4만·5만·6만·7만·8만·10만 스텝이다. 10만 모델은 `100000/pretrained_model`에 보관했고, 7개 파일·프로세서 참조·가중치 형식·모델 설정 읽기를 확인했다. 7만·8만 모델은 각각 `070000/pretrained_model`, `080000/pretrained_model`에 보관했으며, 두 모델의 7개 파일·프로세서 참조·가중치 형식을 확인했다. 두 모델의 가중치는 서로 다르고, 원본 ZIP은 다운로드 폴더에 유지한다. 이 문서 수정에서 다른 모델의 다운로드나 검증, 팔 실행을 완료한 것으로 표시하지 않는다.
 
 `STEP_PAD`는 실제 압축 해제가 끝난 폴더의 6자리 값이어야 한다. 다운로드 폴더에 ZIP만 있는 상태는 실행 준비가 끝난 것이 아니다. 없는 로컬 경로를 넣으면 모델 로더가 이를 HF 저장소 ID로 해석해 `HFValidationError`와 마지막 `RecordConfig` 오류를 낼 수 있다. 6만 스텝은 `060000/pretrained_model`에 정리했고 CUDA 설정 읽기까지 확인했다.
 
@@ -946,7 +1065,7 @@ lerobot-record \
 source /home/team2/venv/il/bin/activate
 cd /home/team2/il_ws/src/lerobot
 
-STEP_PAD="050000"  # 실행할 모델의 스텝: 아래 표의 6자리 값으로 변경
+STEP_PAD="100000"  # 실행할 모델의 스텝: 아래 표의 6자리 값으로 변경
 lerobot-record \
   --robot.type=omx_follower \
   --robot.port=/dev/omx_follower \
@@ -960,7 +1079,7 @@ lerobot-record \
   --dataset.fps=30 \
   --dataset.num_episodes=1 \
   --dataset.episode_time_s=30 \
-  --dataset.reset_time_s=60 \
+  --dataset.reset_time_s=0 \
   --dataset.push_to_hub=false \
   --dataset.private=true
 ```
@@ -1293,7 +1412,11 @@ lerobot-record \
 - [ ] 5090 PC의 LeRobot 호환 환경·HF 로그인·CUDA 연산 확인.
 - [ ] 왼쪽 ACT 학습 및 체크포인트 확인.
 - [ ] 오른쪽 ACT 학습 및 체크포인트 확인.
-- [ ] 왼쪽 1만~10만 스텝의 1차 비교: 10개 모델 × 3시도.
+- [ ] 기존 v1 10만 스텝 한 에피소드 확인 및 결과 기록.
+- [ ] 높은 물체 1종 제외 후 남은 8종·카메라·배치 확정.
+- [ ] 왼쪽 v2 시험 시연 확인 후 새 데이터 60개 수집·검수·HF 업로드.
+- [ ] 새 v2 데이터만 사용한 왼쪽 ACT 재학습·평가.
+- [ ] 필요 시 기존 왼쪽 1만~10만 스텝의 1차 비교: 10개 모델 × 3시도.
 - [ ] 왼쪽 상위 2~3개 후보의 2차 비교: 후보별 18시도 및 최종 모델 선택.
 - [ ] 각 방향 단일 물건 평가 후 카트 전체 평가.
 - [ ] 필요하면 실패 조건을 보강해 방향별 99개(약 100개) 수집.
