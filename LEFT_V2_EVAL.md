@@ -47,7 +47,6 @@ mkdir -p /home/team2/omx_record_logs
 set -o pipefail
 
 STEP_PAD="050000"  # 5만: 050000 / 10만: 100000
-EVAL_TAG=$(date +%Y%m%d_%H%M%S)
 
 lerobot-record \
   --robot.type=omx_follower \
@@ -57,7 +56,7 @@ lerobot-record \
   --policy.path="/home/team2/omx_models/omx_left_act_v2/${STEP_PAD}/pretrained_model" \
   --policy.device=cuda \
   --display_data=true \
-  --dataset.repo_id="chun-hwan/eval_omx_left_v2_s${STEP_PAD}_single_${EVAL_TAG}" \
+  --dataset.repo_id="chun-hwan/eval_omx_left_v2_s${STEP_PAD}_single_$(date +%Y%m%d_%H%M%S_%N)" \
   --dataset.single_task="Move one item from the cart to the left basket and return to the waiting pose." \
   --dataset.fps=30 \
   --dataset.num_episodes=1 \
@@ -67,10 +66,10 @@ lerobot-record \
   --dataset.num_image_writer_threads_per_camera=4 \
   --dataset.streaming_encoding=false \
   --dataset.push_to_hub=false \
-  --dataset.private=true 2>&1 | tee "/home/team2/omx_record_logs/eval_left_v2_s${STEP_PAD}_single_${EVAL_TAG}.log"
+  --dataset.private=true 2>&1 | tee "/home/team2/omx_record_logs/eval_left_v2_s${STEP_PAD}_single_$(date +%Y%m%d_%H%M%S_%N).log"
 ```
 
-한 에피소드는 최대 30초다. 동작 확인 후 `Esc`로 일찍 종료할 수 있다. 물건 이동 완료나 빈 카트를 자동으로 감지해 정지하는 명령은 아니다. 평가 데이터셋 이름과 로그에 스텝·실행 시각이 포함되며 HF 업로드는 끈다.
+한 에피소드는 최대 30초다. 동작 확인 후 `Esc`로 일찍 종료할 수 있다. 물건 이동 완료나 빈 카트를 자동으로 감지해 정지하는 명령은 아니다. 평가 데이터셋 이름과 로그에 스텝·실행 시각이 포함되며 HF 업로드는 끈다. 이름에는 나노초까지 넣고, `lerobot-record`를 실행할 때마다 명령 안에서 새 시각을 생성한다. 같은 터미널에서 명령만 다시 실행해도 새 평가 폴더가 생기므로 `_2`, `_3`을 수동으로 붙이지 않는다. 기존 평가 데이터는 유지한다. 데이터와 로그의 나노초 값은 별도로 생성되며, 정확한 데이터셋 이름은 해당 로그의 `repo_id`에서 확인한다.
 
 ## 3. 카트 3개 자동 평가 — 화살표 없이 진행
 
@@ -86,7 +85,6 @@ mkdir -p /home/team2/omx_record_logs
 set -o pipefail
 
 STEP_PAD="050000"  # 5만: 050000 / 10만: 100000
-EVAL_TAG=$(date +%Y%m%d_%H%M%S)
 
 lerobot-record \
   --robot.type=omx_follower \
@@ -96,7 +94,7 @@ lerobot-record \
   --policy.path="/home/team2/omx_models/omx_left_act_v2/${STEP_PAD}/pretrained_model" \
   --policy.device=cuda \
   --display_data=true \
-  --dataset.repo_id="chun-hwan/eval_omx_left_v2_s${STEP_PAD}_cart_${EVAL_TAG}" \
+  --dataset.repo_id="chun-hwan/eval_omx_left_v2_s${STEP_PAD}_cart_$(date +%Y%m%d_%H%M%S_%N)" \
   --dataset.single_task="Move one item from the cart to the left basket and return to the waiting pose." \
   --dataset.fps=30 \
   --dataset.num_episodes=3 \
@@ -106,14 +104,14 @@ lerobot-record \
   --dataset.num_image_writer_threads_per_camera=4 \
   --dataset.streaming_encoding=false \
   --dataset.push_to_hub=false \
-  --dataset.private=true 2>&1 | tee "/home/team2/omx_record_logs/eval_left_v2_s${STEP_PAD}_cart_${EVAL_TAG}.log"
+  --dataset.private=true 2>&1 | tee "/home/team2/omx_record_logs/eval_left_v2_s${STEP_PAD}_cart_$(date +%Y%m%d_%H%M%S_%N).log"
 ```
 
 세 에피소드 실행이 세 개 성공을 뜻하지 않는다. 한 에피소드에서 실제로 옮긴 수가 다를 수 있고, 실패해 물건이 남아도 시간에 따라 다음 에피소드로 넘어간다. 실제 담긴 물건·복귀·남은 물건을 관찰한다. 카트가 먼저 비거나 중단이 필요하면 `Esc`로 종료한다. 성공 수는 실제 영상과 결과로 판정한다.
 
 ## 4. 결과 기록
 
-평가 영상은 `/home/team2/.cache/huggingface/lerobot/chun-hwan/eval_omx_left_v2_s<스텝>_<single 또는 cart>_<실행시각>/`에 저장된다. 실행 로그는 `/home/team2/omx_record_logs/`에 있다.
+평가 영상은 `/home/team2/.cache/huggingface/lerobot/chun-hwan/eval_omx_left_v2_s<스텝>_<single 또는 cart>_<실행시각_나노초>/`에 저장된다. 실행 로그는 `/home/team2/omx_record_logs/`에 있다.
 
 | 모델 | 물건·배치 | 정상 담기 /3 | 대기 자세 복귀 | 주요 실패·개입 | 평가 데이터셋 |
 | --- | --- | --- | --- | --- | --- |
