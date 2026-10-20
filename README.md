@@ -2,6 +2,8 @@
 
 작성일: 2026-10-19
 
+체크포인트 비교 절 갱신: 2026-10-20
+
 데스크톱에서 처음 받는 경우: **[DESKTOP_TRAIN.md — Git clone부터 환경 설치·66개 확인·왼쪽 학습까지](DESKTOP_TRAIN.md)**
 
 GitHub: https://github.com/rheffi/omx-imitation-project (비공개). 이 저장소는 프로젝트 문서·카메라 기준 이미지·LeRobot 버전 정보·현재 수정 패치를 관리한다. 학습 코드는 문서의 고정 커밋으로 설치하고, 녹화 데이터와 모델은 Hugging Face로 전달한다.
@@ -17,7 +19,7 @@ GitHub: https://github.com/rheffi/omx-imitation-project (비공개). 이 저장�
 - [중단 후 녹화 재개·추가 수집](#11-데이터-확인과-추가-녹화)
 - [현재 왼쪽 66개로 첫 학습](#12-왼쪽-act-모델-학습--rtx-5090-pc)
 - [학습 재개·보강 후 v2 학습](#14-학습-중단과-데이터-추가-후-처리)
-- [실제 팔 평가](#15-실제-팔에서-첫-평가)
+- [1만~10만 스텝 비교·전체 평가 명령·결과표](#15-실제-팔에서-첫-평가)
 
 현재 수집 기준:
 
@@ -799,63 +801,79 @@ lerobot-train \
 
 ## 15. 실제 팔에서 첫 평가
 
-여기부터는 현재 OMX 연결 PC로 돌아와 실행한다. 5090 PC에서 좌우 모델의 HF 업로드가 끝났는지 확인한다. 각 평가 명령 블록에 현재 PC의 가상환경 활성화·장치값·모델 경로가 포함돼 있다. 첫 평가는 v1 모델을 사용한다.
+### 현재 목표 — 1만~10만 스텝 중 실제로 잘되는 모델 고르기
 
-아래 명령은 5090 PC의 로컬 파일 경로 대신 HF 모델 저장소 ID로 모델을 불러온다. 현재 PC도 비공개 모델을 읽을 권한이 있어야 한다. 네트워크를 쓰지 않고 옮기는 경우에는 `pretrained_model` 폴더 전체를 현재 PC에 복사하고 `policy.path`에 복사한 경로를 넣는다. 가중치 파일 하나만 옮기면 설정·정규화·프로세서 파일이 빠질 수 있다.
+왼쪽 ACT v1 학습에서 1만 스텝 간격으로 저장한 10개 체크포인트를 비교한다. 학습 스텝이나 loss만으로 최종 모델을 정하지 않고, 같은 조건에서 물건을 왼쪽 바구니에 담는 결과로 선택한다. 오른쪽 모델의 비교는 별도로 진행한다.
 
-이 명령은 학습된 정책이 실제 팔을 움직이는 명령이다. 처음에는 감독하에 물건 하나를 놓고 한 번만 평가한다. 원격조종이나 다른 제어 프로세스는 종료하고 수집 때와 같은 장치·보정·카메라 설정을 사용한다. 현재 PC에서 CUDA 추론이 가능한지도 먼저 확인한다.
-
-강의와 현재 설치본에 맞춰 `lerobot-record`에 `--policy.path`를 추가하는 평가 방식을 사용한다. 최신 문서의 다른 실행 명령과 섞지 않는다. 평가 데이터셋 이름은 `eval_`로 시작해야 한다.
-
-### 로컬 5만 스텝 모델 평가 — 한 개 먼저
-
-다운로드한 `omx_left_act_step050000.zip`은 다음 경로에 압축을 풀어 정리했다. 기존 1만·4만 스텝 모델과 원본 ZIP은 그대로 보관한다. 5만 스텝 모델의 7개 파일, JSON 설정, 프로세서의 정규화 파일 참조, 가중치 형식을 확인했고, 4만 스텝 모델과 가중치가 다른 것도 확인했다. 실제 팔 평가는 이 정리 작업에서 실행하지 않았다.
+이 절의 우선 실행 대상은 다운로드한 **로컬 체크포인트**다. 각 모델은 다음 구조로 보관하고, 비교가 끝날 때까지 기존 모델과 원본 ZIP을 유지한다. 다운로드 완료와 파일 검증은 별개다. 아직 내려받거나 압축을 풀지 않은 모델은 이 경로에 준비된 뒤 시험한다.
 
 ```text
-/home/team2/omx_models/omx_left_act_v1/050000/pretrained_model/
+/home/team2/omx_models/omx_left_act_v1/
+├── 010000/pretrained_model/
+├── 020000/pretrained_model/
+├── 030000/pretrained_model/
+├── 040000/pretrained_model/
+├── 050000/pretrained_model/
+├── 060000/pretrained_model/
+├── 070000/pretrained_model/
+├── 080000/pretrained_model/
+├── 090000/pretrained_model/
+└── 100000/pretrained_model/
 ```
 
-아래는 HF의 최종 모델 대신 현재 노트북에 받은 5만 스텝 체크포인트를 실행하는 전체 명령이다. 평가 저장소 이름은 실행 시각을 붙여 기존 평가 폴더와 충돌하지 않게 한다.
+`pretrained_model`에는 가중치 하나만 넣지 않고 `config.json`, `model.safetensors`, `train_config.json`, 전처리·후처리 JSON과 각각의 정규화 가중치까지 **7개 파일**을 함께 둔다. 현재까지 정리·검증한 모델은 1만·4만·5만 스텝이다. 이 문서 수정에서 다른 모델의 다운로드나 검증, 팔 실행을 완료한 것으로 표시하지 않는다.
+
+### 비교 전에 카메라와 물건 배치 고정
+
+정면 카메라는 아래 명령으로 기존 학습 영상과 겹쳐 맞춘다. 기존 영상 40%, 실시간 영상 60%이며, 로봇 베이스와 선반 모서리처럼 움직이지 않는 부분을 기준으로 비교한다. 물건이나 팔의 움직이는 부분을 기준으로 맞추지 않는다. 녹화·다른 카메라 미리보기를 종료한 뒤 실행하고, 맞춘 뒤 `q`로 닫아 카메라를 반환한다.
+
+```bash
+ffplay -hide_banner -loglevel error \
+  -window_title "OMX alignment - old 40%, live 60%" \
+  -f v4l2 \
+  -input_format mjpeg \
+  -video_size 640x480 \
+  -framerate 30 \
+  -i /dev/v4l/by-id/usb-HFSD-231214-J_SNAP_U2-video-index0 \
+  -filter_threads 1 \
+  -vf "movie=/home/team2/dev_ws/omx_imitation_project/camera_reference/front_left_v1_ep000000.png[ref];[in][ref]blend=all_expr='A*0.6+B*0.4'[out]"
+```
+
+정면·손목 카메라, 카트와 왼쪽 바구니 위치, 조명, 팔의 대기 자세를 비교 중 유지한다. 카메라가 다시 움직이거나 모터 오류가 난 시험은 모델의 일반 실패와 구분해 기록하고, 조건을 복구한 뒤 다시 시험한다.
+
+물건 9종에 1~9번을 붙여 아래 구성을 채운다. A에는 모양이 서로 다른 대표 물건 3개를 넣고, B·C에는 나머지 물건을 3개씩 배정한다. 구성별 처음 놓는 위치와 방향을 사진으로 남기거나 바닥에 표시해 모델마다 재현한다.
+
+| 구성 | 물건 번호·이름 3개 | 시작 배치 사진 또는 위치 메모 |
+| --- | --- | --- |
+| A — 1차·2차 공통 | 미기록 | 미기록 |
+| B — 2차 | 미기록 | 미기록 |
+| C — 2차 | 미기록 | 미기록 |
+
+### 1차 비교 — 10개 모델 × 카트 1회
+
+1. 동일한 구성 A와 시작 배치로 각 모델을 시험한다.
+2. 모델당 아래 **3에피소드 명령을 한 번** 실행한다. 한 에피소드는 한 개 집기 → 왼쪽 바구니에 놓기 → 대기 자세 복귀다.
+3. 성공하면 물건을 보충하지 않고 카트를 3→2→1→0으로 비운다. 모델을 바꿀 때는 A의 물건 3개와 처음 배치를 다시 준비한다.
+4. 각 시도는 최대 30초로 비교한다. 대기 자세까지 돌아온 성공 시도는 `→`로 녹화를 끝낸다. 준비 단계에서 다음 배치가 준비되면 `→`로 시작한다. 저장·인코딩 중에는 방향키를 누르지 않는다.
+5. 실패한 에피소드는 실패로 남긴다. 다음 시도를 2개·1개 조건으로 맞추기 위해 준비 단계에서 사람이 물건을 빼거나 팔을 정리했다면 개입을 기록한다. 해당 카트는 무개입 전체 성공으로 세지 않는다.
+6. 총 30번의 집기 시도로 상위 2~3개를 고른다. 정상 담기 횟수를 우선하고, 복귀와 실패 모습을 함께 본다. 3번만으로 성능이 확정된 것은 아니므로 후보를 2차에서 재시험한다.
+
+아래 블록은 **자동으로 10개 모델을 연속 실행하지 않는다.** 한 번 실행하면 선택한 모델만 3에피소드 시험한다. 맨 위 `STEP_PAD` 한 곳을 표의 값으로 바꾸고 블록 전체를 복사한다. 매 실행마다 평가 데이터셋에 시각을 붙이므로 기존 평가 폴더를 덮어쓰지 않는다. 평가는 로컬에 저장하고 HF 업로드는 하지 않는다.
 
 ```bash
 source /home/team2/venv/il/bin/activate
 cd /home/team2/il_ws/src/lerobot
 
+STEP_PAD="050000"  # 실행할 모델의 스텝: 아래 표의 6자리 값으로 변경
 lerobot-record \
   --robot.type=omx_follower \
   --robot.port=/dev/omx_follower \
   --robot.id=omx_follower_arm \
   --robot.cameras='{ front: {type: opencv, index_or_path: "/dev/v4l/by-id/usb-HFSD-231214-J_SNAP_U2-video-index0", width: 640, height: 480, fps: 30, fourcc: MJPG}, wrist: {type: opencv, index_or_path: "/dev/v4l/by-id/usb-Innomaker_Innomaker-U20CAM-720P_SN0001-video-index0", width: 640, height: 480, fps: 30, fourcc: MJPG}}' \
-  --policy.path=/home/team2/omx_models/omx_left_act_v1/050000/pretrained_model \
+  --policy.path="/home/team2/omx_models/omx_left_act_v1/${STEP_PAD}/pretrained_model" \
   --policy.device=cuda \
   --display_data=true \
-  --dataset.repo_id="chun-hwan/eval_omx_left_s050000_$(date +%Y%m%d_%H%M%S)" \
-  --dataset.single_task="Move one item from the cart to the left basket and return to the waiting pose." \
-  --dataset.fps=30 \
-  --dataset.num_episodes=1 \
-  --dataset.episode_time_s=30 \
-  --dataset.reset_time_s=60 \
-  --dataset.push_to_hub=false \
-  --dataset.private=true
-```
-
-### 로컬 5만 스텝 모델 평가 — 카트의 물건 3개
-
-한 번 옮기기가 확인된 뒤 아래 블록으로 3에피소드를 실행한다. 물건을 놓고 대기 자세로 복귀하면 `→`, 준비 단계에서 남은 물건을 그대로 둔 채 `→`로 다음 녹화를 시작한다. 카트는 3→2→1→0으로 비우며 중간에 다시 채우지 않는다. 저장·인코딩 중에는 방향키를 누르지 않는다.
-
-```bash
-source /home/team2/venv/il/bin/activate
-cd /home/team2/il_ws/src/lerobot
-
-lerobot-record \
-  --robot.type=omx_follower \
-  --robot.port=/dev/omx_follower \
-  --robot.id=omx_follower_arm \
-  --robot.cameras='{ front: {type: opencv, index_or_path: "/dev/v4l/by-id/usb-HFSD-231214-J_SNAP_U2-video-index0", width: 640, height: 480, fps: 30, fourcc: MJPG}, wrist: {type: opencv, index_or_path: "/dev/v4l/by-id/usb-Innomaker_Innomaker-U20CAM-720P_SN0001-video-index0", width: 640, height: 480, fps: 30, fourcc: MJPG}}' \
-  --policy.path=/home/team2/omx_models/omx_left_act_v1/050000/pretrained_model \
-  --policy.device=cuda \
-  --display_data=true \
-  --dataset.repo_id="chun-hwan/eval_omx_left_s050000_cart_$(date +%Y%m%d_%H%M%S)" \
+  --dataset.repo_id="chun-hwan/eval_omx_left_s${STEP_PAD}_cart_$(date +%Y%m%d_%H%M%S)" \
   --dataset.single_task="Move one item from the cart to the left basket and return to the waiting pose." \
   --dataset.fps=30 \
   --dataset.num_episodes=3 \
@@ -865,29 +883,75 @@ lerobot-record \
   --dataset.private=true
 ```
 
-### 로컬 4만 스텝 모델 평가 — 한 개 먼저
+평가 영상은 `/home/team2/.cache/huggingface/lerobot/chun-hwan/eval_omx_left_s<스텝>_cart_<실행시각>/`에 저장된다. 실행 시각 또는 데이터셋 이름을 아래 표에 남긴다. 세부 결과는 영상과 함께 확인하며, 명령 자체가 성공 여부를 자동 판정하지는 않는다.
 
-다운로드한 `omx_left_act_step040000.zip`은 다음 경로에 압축을 풀어 정리했다. 1만 스텝 모델은 `010000`에 별도로 보관한다. 4만 스텝 모델의 7개 파일과 가중치 형식을 확인했고, 1만 스텝 모델과 가중치가 다른 것도 확인했다. 실제 팔 평가는 이 정리 작업에서 실행하지 않았다.
+| 스텝 | STEP_PAD | 정상 담기 /3 | 대기 자세 복귀 /3 | 무개입 카트 전체 성공 | 실패·개입 / 평가 데이터셋 | 2차 후보 |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1만 | 010000 | — | — | — | — | — |
+| 2만 | 020000 | — | — | — | — | — |
+| 3만 | 030000 | — | — | — | — | — |
+| 4만 | 040000 | — | — | — | — | — |
+| 5만 | 050000 | — | — | — | — | — |
+| 6만 | 060000 | — | — | — | — | — |
+| 7만 | 070000 | — | — | — | — | — |
+| 8만 | 080000 | — | — | — | — | — |
+| 9만 | 090000 | — | — | — | — | — |
+| 10만 | 100000 | — | — | — | — | — |
 
-```text
-/home/team2/omx_models/omx_left_act_v1/040000/pretrained_model/
-```
+### 2차 비교 — 후보별 3가지 구성 × 2회
 
-아래는 HF의 최종 모델 대신 현재 노트북에 받은 4만 스텝 체크포인트를 실행하는 전체 명령이다. 평가 저장소 이름은 실행 시각을 붙여 기존 평가 폴더와 충돌하지 않게 한다.
+후보 모델마다 A·B·C를 두 번씩 시험한다. 위 3에피소드 명령의 `STEP_PAD`를 후보 값으로 바꿔 카트마다 한 번 실행한다. **후보 하나당 6카트·18번의 집기 시도**다. 세 후보면 54번, 두 후보면 36번이며, 각각 1차 30번과 별도다. 1차 결과를 2차 18번에 섞어 세지 않는다.
+
+모델마다 A 1회차 → B 1회차 → C 1회차 → A 2회차 → B 2회차 → C 2회차 순서와 시작 배치를 동일하게 맞춘다. 팔이 수행하는 물건 선택 순서까지 사람이 강제하지는 않는다.
+
+아래 표를 후보별로 복사해서 사용한다. 각 시도의 성공까지 걸린 시간과 헛집기·낙하·잘못된 위치에 놓기·복귀 실패·사람 개입을 메모한다. 실패는 30초 제한 내 미완료로 표시하고, 성공한 시도의 시간만 따로 비교한다.
+
+후보 스텝: **미선정**
+
+| 구성 | 반복 | 정상 담기 /3 | 대기 자세 복귀 /3 | 무개입 카트 전체 성공 | 성공 시간·실패·개입 / 평가 데이터셋 |
+| --- | --- | --- | --- | --- | --- |
+| A | 1 | — | — | — | — |
+| B | 1 | — | — | — | — |
+| C | 1 | — | — | — | — |
+| A | 2 | — | — | — | — |
+| B | 2 | — | — | — | — |
+| C | 2 | — | — | — | — |
+
+### 성공 기준과 최종 선택 기록
+
+- **정상 담기:** 카트의 물건 한 개를 집어 왼쪽 바구니 안에 놓았다. 헛집기, 바구니 밖 낙하, 사람이 집기·담기를 도운 시도는 정상 담기로 세지 않는다.
+- **대기 자세 복귀:** 정상 담기 후 그리퍼를 열고 학습 때의 대기 자세로 돌아왔다. 담기는 성공했지만 복귀가 실패한 경우 두 항목을 구분한다.
+- **카트 전체 성공:** 사람의 도움 없이 세 에피소드 모두 정상 담기와 복귀를 마쳤다. 물건이 남았는데 세 번 실행했다는 이유만으로 성공으로 세지 않는다.
+- **선택 순서:** 2차 정상 담기 성공률을 우선한다. 비슷하면 무개입 카트 전체 성공, 대기 자세 복귀, 성공 시간과 반복 실패 유형을 함께 비교한다. 차이가 불분명하면 해당 후보만 같은 조건으로 추가 비교한다.
+
+| 후보 스텝 | 정상 담기 /18 | 복귀 /18 | 무개입 카트 전체 성공 /6 | 주요 실패·성공 시간 | 선택 여부·이유 |
+| --- | --- | --- | --- | --- | --- |
+| 후보 1 — 미선정 | — | — | — | — | — |
+| 후보 2 — 미선정 | — | — | — | — | — |
+| 후보 3 — 필요 시 | — | — | — | — | — |
+
+- 최종 선택 스텝: **미선정**
+- 최종 모델 경로: **미선정**
+- 비교 날짜·카메라 기준·선택 이유: **미기록**
+
+### 필요할 때만 — 선택한 로컬 모델 한 에피소드 확인
+
+처음 보는 모델의 동작을 한 번 먼저 확인하려면 아래 블록을 쓴다. `STEP_PAD` 한 곳을 바꾼다. 이 사전 확인은 위의 공통 조건 1차·2차 결과와 구분해 기록한다. 3개 물건이 실린 카트를 한 에피소드만 실행하면 한 개 이동만 평가한다.
 
 ```bash
 source /home/team2/venv/il/bin/activate
 cd /home/team2/il_ws/src/lerobot
 
+STEP_PAD="050000"  # 실행할 모델의 스텝: 아래 표의 6자리 값으로 변경
 lerobot-record \
   --robot.type=omx_follower \
   --robot.port=/dev/omx_follower \
   --robot.id=omx_follower_arm \
   --robot.cameras='{ front: {type: opencv, index_or_path: "/dev/v4l/by-id/usb-HFSD-231214-J_SNAP_U2-video-index0", width: 640, height: 480, fps: 30, fourcc: MJPG}, wrist: {type: opencv, index_or_path: "/dev/v4l/by-id/usb-Innomaker_Innomaker-U20CAM-720P_SN0001-video-index0", width: 640, height: 480, fps: 30, fourcc: MJPG}}' \
-  --policy.path=/home/team2/omx_models/omx_left_act_v1/040000/pretrained_model \
+  --policy.path="/home/team2/omx_models/omx_left_act_v1/${STEP_PAD}/pretrained_model" \
   --policy.device=cuda \
   --display_data=true \
-  --dataset.repo_id="chun-hwan/eval_omx_left_s040000_$(date +%Y%m%d_%H%M%S)" \
+  --dataset.repo_id="chun-hwan/eval_omx_left_s${STEP_PAD}_single_$(date +%Y%m%d_%H%M%S)" \
   --dataset.single_task="Move one item from the cart to the left basket and return to the waiting pose." \
   --dataset.fps=30 \
   --dataset.num_episodes=1 \
@@ -897,31 +961,9 @@ lerobot-record \
   --dataset.private=true
 ```
 
-### 로컬 4만 스텝 모델 평가 — 카트의 물건 3개
+### HF에 업로드한 모델 평가
 
-한 번 옮기기가 확인된 뒤 아래 블록으로 3에피소드를 실행한다. 물건을 놓고 대기 자세로 복귀하면 `→`, 준비 단계에서 남은 물건을 그대로 둔 채 `→`로 다음 녹화를 시작한다. 카트는 3→2→1→0으로 비우며 중간에 다시 채우지 않는다. 저장·인코딩 중에는 방향키를 누르지 않는다.
-
-```bash
-source /home/team2/venv/il/bin/activate
-cd /home/team2/il_ws/src/lerobot
-
-lerobot-record \
-  --robot.type=omx_follower \
-  --robot.port=/dev/omx_follower \
-  --robot.id=omx_follower_arm \
-  --robot.cameras='{ front: {type: opencv, index_or_path: "/dev/v4l/by-id/usb-HFSD-231214-J_SNAP_U2-video-index0", width: 640, height: 480, fps: 30, fourcc: MJPG}, wrist: {type: opencv, index_or_path: "/dev/v4l/by-id/usb-Innomaker_Innomaker-U20CAM-720P_SN0001-video-index0", width: 640, height: 480, fps: 30, fourcc: MJPG}}' \
-  --policy.path=/home/team2/omx_models/omx_left_act_v1/040000/pretrained_model \
-  --policy.device=cuda \
-  --display_data=true \
-  --dataset.repo_id="chun-hwan/eval_omx_left_s040000_cart_$(date +%Y%m%d_%H%M%S)" \
-  --dataset.single_task="Move one item from the cart to the left basket and return to the waiting pose." \
-  --dataset.fps=30 \
-  --dataset.num_episodes=3 \
-  --dataset.episode_time_s=30 \
-  --dataset.reset_time_s=60 \
-  --dataset.push_to_hub=false \
-  --dataset.private=true
-```
+아래부터는 로컬 체크포인트 비교 명령과 별개로, HF에 업로드된 왼쪽·오른쪽 v1·v2 모델을 평가할 때 쓰는 전체 명령이다. 현재 PC에 해당 모델을 읽을 권한이 있어야 한다. 현재 설치본에 맞춰 `lerobot-record`에 `--policy.path`를 지정하며, 평가 데이터셋 이름은 `eval_`로 시작해야 한다.
 
 ### 왼쪽 한 번 평가
 
@@ -1247,6 +1289,8 @@ lerobot-record \
 - [ ] 5090 PC의 LeRobot 호환 환경·HF 로그인·CUDA 연산 확인.
 - [ ] 왼쪽 ACT 학습 및 체크포인트 확인.
 - [ ] 오른쪽 ACT 학습 및 체크포인트 확인.
+- [ ] 왼쪽 1만~10만 스텝의 1차 비교: 10개 모델 × 3시도.
+- [ ] 왼쪽 상위 2~3개 후보의 2차 비교: 후보별 18시도 및 최종 모델 선택.
 - [ ] 각 방향 단일 물건 평가 후 카트 전체 평가.
 - [ ] 필요하면 실패 조건을 보강해 방향별 99개(약 100개) 수집.
 - [ ] 보강 데이터로 v2 학습·재평가.
