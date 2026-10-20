@@ -8,15 +8,15 @@
 
 GitHub: https://github.com/rheffi/omx-imitation-project (비공개). 이 저장소는 프로젝트 문서·카메라 기준 이미지·LeRobot 버전 정보·현재 수정 패치를 관리한다. 학습 코드는 문서의 고정 커밋으로 설치하고, 녹화 데이터와 모델은 Hugging Face로 전달한다.
 
-장치 확인 및 설정 갱신: 2026-10-19
+장치 확인 및 설정 갱신: 2026-10-20
 
-기존 왼쪽 v1 데이터 `chun-hwan/omx-unload-left-v1`은 66에피소드·37,012프레임이다. 현재는 v1의 10만 스텝 모델을 한 번 확인한 뒤, 높은 물체 1종을 제외한 8종으로 왼쪽 시연을 새로 수집한다. 새 수집은 `left-v2`로 구분하고 기존 데이터·모델은 보관한다. 바로 할 작업은 아래 0절을 따른다.
+기존 왼쪽 v1 데이터 `chun-hwan/omx-unload-left-v1`은 66에피소드·37,012프레임이다. 현재는 리더·팔로워를 교체하고 높은 물체 1종을 제외한 8종으로 왼쪽 시연을 새로 수집한다. 새 수집은 `left-v2`로 구분하고 기존 데이터·모델은 보관한다. 바로 할 작업은 [왼쪽 재녹화 명령](LEFT_RERECORD.md)을 따른다.
 
 실행 명령은 부분 옵션 대신 복붙할 수 있는 전체 블록으로 적었다. 녹화·실제 팔 평가 블록에는 현재 PC의 가상환경 활성화와 장치값을 포함했다. 5090 PC용 학습 블록은 해당 PC의 학습용 가상환경을 활성화한 뒤 실행한다. 명령 블록은 필요한 것 하나를 골라 실행한다.
 
 바로 실행할 명령 위치:
 
-- [현재 진행 — 10만 스텝 1회 확인·8종 재녹화](#0-현재-진행--10만-스텝-1회-확인과-8종-재녹화)
+- [새 팔로 왼쪽 재녹화 — 전체 실행 명령](LEFT_RERECORD.md)
 
 - [중단 후 녹화 재개·추가 수집](#11-데이터-확인과-추가-녹화)
 - [현재 왼쪽 66개로 첫 학습](#12-왼쪽-act-모델-학습--rtx-5090-pc)
@@ -36,118 +36,17 @@ GitHub: https://github.com/rheffi/omx-imitation-project (비공개). 이 저장�
 
 명령은 강의자료와 현재 PC의 `/home/team2/il_ws/src/lerobot` 소스를 확인해 정리했다. 리더암·서브암의 장치 경로, 기존 보정 파일의 ID, 모터 읽기 통신, 외장 카메라 2대의 경로와 영상 수신을 확인해 공통 설정에 반영했다. 손목을 초기 자세로 정렬한 뒤 사용자가 원격조종 정상 동작을 확인했다. 실제 집기 중 카메라 구도와 데이터 품질은 시험 녹화에서 확인한다. 최신 인터넷 예제를 따라 패키지를 일괄 업그레이드하지 않고 강의에서 사용한 환경을 유지한다.
 
-## 0. 현재 진행 — 10만 스텝 1회 확인과 8종 재녹화
+## 0. 현재 진행 — 새 팔로 왼쪽 재녹화
 
-### 확인한 증상과 진행 순서
+2026-10-20 리더·팔로워를 모두 교체했다. 높은 물체 1종을 제외한 8종으로 왼쪽 데이터를 새로 모은다. 기존 v1 66개·기존 모델은 보관한다. 새 데이터는 `chun-hwan/omx-unload-left-v2`, 목표는 우선 60에피소드·20카트다.
 
-사용자 시험에서 물체 바로 위 허공에서 그리퍼를 닫아 집지 못하는 동작을 관찰했다. 높이가 큰 물체 1종이 영향을 줬는지는 아직 확정하지 않았다. 이번에는 해당 물체를 제외하고 수집 조건을 줄여 다시 시연하기로 했다. 기존 데이터에서 일부 에피소드를 자동 삭제하거나 기존 모델을 덮어쓰지는 않는다.
+**지금 실행할 전체 터미널 명령은 [LEFT_RERECORD.md](LEFT_RERECORD.md)에 순서대로 정리했다.** 새 팔 원격조종 → 30초 타이머 시험 녹화 3개·FPS 확인 → 새 왼쪽 v2 60개 녹화 → 중단 후 재개 → 저장 개수 확인 순서다. 각 블록에 가상환경·새 포트·카메라·저장 워커 설정이 모두 포함되어 있다.
 
-1. 아래 명령으로 기존 v1 **10만 스텝 모델을 1에피소드·30초만** 확인한다. 물건을 3개 올려도 한 번의 이동을 확인하는 시험이다.
-2. 높은 물체 1종을 제외하고 남은 8종을 정한다. 카트당 3개, 한 개 집기 → 왼쪽 바구니에 놓기 → 대기 자세 복귀 범위는 유지한다.
-3. 카메라·카트·바구니·대기 자세를 고정하고, 8절의 전체 시험 녹화 명령으로 먼저 3→2→1→0 시연을 확인한다.
-4. 집게가 물체를 실제로 잡을 높이까지 내려간 뒤 닫는 성공 시연을 수집한다. 헛집기·낙하·미완료 시연은 취소하고 다시 찍는다.
-5. 새 왼쪽 데이터 `chun-hwan/omx-unload-left-v2`에 우선 60에피소드·20카트를 새로 수집한다. 8종을 각각 약 7~8회 옮기며, 같은 물건만 항상 마지막에 남지 않게 조합과 배치를 바꾼다.
-6. 새 데이터의 영상·성공 시연·저장 개수와 HF 업로드를 확인한 뒤 14절의 왼쪽 v2 명령으로 새 학습을 시작한다. 기존 v1 학습 재개 명령과 구분한다.
+새 팔의 `/dev/omx_*` 별칭은 생성되지 않는다. 아래 문서 명령도 새 팔의 `/dev/serial/by-id/` 경로로 갱신했다. 운영체제의 udev 규칙과 모터 설정은 이 문서 정리에서 변경하지 않았다. 원격조종·녹화는 사용자가 터미널에서 실행한다.
 
-아래 1~13절과 15절의 전체 체크포인트 비교표에는 기존 v1의 9종·66개 기준이 남아 있다. **지금 재녹화할 때는 이 0절의 v2 명령을 사용한다.** 기존 9종 균등 배분·v1 추가 수집 명령을 새 v2 수집에 사용하지 않는다. 오른쪽 수집·재학습은 별도 진행한다.
+[기존 녹화 프레임·워커·교체 팔 점검 보고서](RECORDING_AUDIT_20261020.md)
 
-### 지금 실행 — 기존 v1 10만 스텝 한 번 확인
-
-모델은 `/home/team2/omx_models/omx_left_act_v1/100000/pretrained_model`에 정리했다. 원본 ZIP은 유지한다. 아래는 실제 팔을 움직이는 평가 명령이며, 이 문서 정리 과정에서는 실행하지 않았다. 완료·빈 카트 감지 없이 30초 뒤 종료하고, 평가 영상은 시각이 붙은 별도 로컬 데이터셋에 저장한다.
-
-```bash
-source /home/team2/venv/il/bin/activate
-cd /home/team2/il_ws/src/lerobot
-
-STEP_PAD="100000"  # 실행할 모델의 스텝: 아래 표의 6자리 값으로 변경
-lerobot-record \
-  --robot.type=omx_follower \
-  --robot.port=/dev/omx_follower \
-  --robot.id=omx_follower_arm \
-  --robot.cameras='{ front: {type: opencv, index_or_path: "/dev/v4l/by-id/usb-HFSD-231214-J_SNAP_U2-video-index0", width: 640, height: 480, fps: 30, fourcc: MJPG}, wrist: {type: opencv, index_or_path: "/dev/v4l/by-id/usb-Innomaker_Innomaker-U20CAM-720P_SN0001-video-index0", width: 640, height: 480, fps: 30, fourcc: MJPG}}' \
-  --policy.path="/home/team2/omx_models/omx_left_act_v1/${STEP_PAD}/pretrained_model" \
-  --policy.device=cuda \
-  --display_data=true \
-  --dataset.repo_id="chun-hwan/eval_omx_left_s${STEP_PAD}_single_$(date +%Y%m%d_%H%M%S)" \
-  --dataset.single_task="Move one item from the cart to the left basket and return to the waiting pose." \
-  --dataset.fps=30 \
-  --dataset.num_episodes=1 \
-  --dataset.episode_time_s=30 \
-  --dataset.reset_time_s=0 \
-  --dataset.push_to_hub=false \
-  --dataset.private=true
-```
-
-10만 스텝 1회 결과: **미기록**. 결과를 확인한 뒤 재녹화를 진행한다.
-
-### 새 왼쪽 v2 본 녹화 — 처음 시작할 때
-
-첫 수집에서만 아래 블록을 사용한다. 기존 v1에 이어 붙이지 않고 새 v2를 만든다. 중단 후에는 다음 재개 블록을 쓴다. 평가의 자동 진행과 달리 **시연 녹화에는 준비 시간 60초를 유지**한다. 한 개를 옮기고 대기 자세로 복귀하면 `→`, 다음 장면이 준비됐으면 준비 단계에서 `→`를 짧게 한 번 눌러 시작한다. 저장·인코딩 중에는 키를 누르지 않는다.
-
-```bash
-source /home/team2/venv/il/bin/activate
-cd /home/team2/il_ws/src/lerobot
-
-lerobot-record \
-  --robot.type=omx_follower \
-  --robot.port=/dev/omx_follower \
-  --robot.id=omx_follower_arm \
-  --robot.cameras='{ front: {type: opencv, index_or_path: "/dev/v4l/by-id/usb-HFSD-231214-J_SNAP_U2-video-index0", width: 640, height: 480, fps: 30, fourcc: MJPG}, wrist: {type: opencv, index_or_path: "/dev/v4l/by-id/usb-Innomaker_Innomaker-U20CAM-720P_SN0001-video-index0", width: 640, height: 480, fps: 30, fourcc: MJPG}}' \
-  --teleop.type=omx_leader \
-  --teleop.port=/dev/omx_leader \
-  --teleop.id=omx_leader_arm \
-  --display_data=true \
-  --dataset.repo_id=chun-hwan/omx-unload-left-v2 \
-  --dataset.single_task="Move one item from the cart to the left basket and return to the waiting pose." \
-  --dataset.fps=30 \
-  --dataset.num_episodes=60 \
-  --dataset.episode_time_s=30 \
-  --dataset.reset_time_s=60 \
-  --dataset.push_to_hub=true \
-  --dataset.private=true
-```
-
-### 새 왼쪽 v2 녹화 재개 — 저장된 개수부터 60개까지
-
-아래 명령은 v2의 실제 저장 개수를 읽어 남은 수량만 추가한다. v2를 아직 시작하지 않았다면 위 신규 수집 명령부터 사용한다. 실패 시연을 취소·재녹화했다면 실제 정상 저장된 개수로 센다.
-
-```bash
-source /home/team2/venv/il/bin/activate
-cd /home/team2/il_ws/src/lerobot
-
-TARGET_EPISODES=60
-CURRENT_EPISODES=$(python - <<'COUNT'
-import json
-from lerobot.utils.constants import HF_LEROBOT_HOME
-p = HF_LEROBOT_HOME / "chun-hwan" / "omx-unload-left-v2" / "meta/info.json"
-print(json.loads(p.read_text())["total_episodes"])
-COUNT
-) &&
-REMAINING_EPISODES=$((TARGET_EPISODES - CURRENT_EPISODES)) &&
-if [ "$REMAINING_EPISODES" -gt 0 ]; then
-  echo "현재 ${CURRENT_EPISODES}개 → ${REMAINING_EPISODES}개 추가 → 목표 ${TARGET_EPISODES}개"
-  lerobot-record \
-    --resume=true \
-    --robot.type=omx_follower \
-    --robot.port=/dev/omx_follower \
-    --robot.id=omx_follower_arm \
-    --robot.cameras='{ front: {type: opencv, index_or_path: "/dev/v4l/by-id/usb-HFSD-231214-J_SNAP_U2-video-index0", width: 640, height: 480, fps: 30, fourcc: MJPG}, wrist: {type: opencv, index_or_path: "/dev/v4l/by-id/usb-Innomaker_Innomaker-U20CAM-720P_SN0001-video-index0", width: 640, height: 480, fps: 30, fourcc: MJPG}}' \
-    --teleop.type=omx_leader \
-    --teleop.port=/dev/omx_leader \
-    --teleop.id=omx_leader_arm \
-    --display_data=true \
-    --dataset.repo_id=chun-hwan/omx-unload-left-v2 \
-    --dataset.single_task="Move one item from the cart to the left basket and return to the waiting pose." \
-    --dataset.fps=30 \
-    --dataset.num_episodes="$REMAINING_EPISODES" \
-    --dataset.episode_time_s=30 \
-    --dataset.reset_time_s=60 \
-    --dataset.push_to_hub=true \
-    --dataset.private=true
-else
-  echo "이미 ${CURRENT_EPISODES}개 저장됨. 목표 ${TARGET_EPISODES}개까지 추가할 녹화 없음."
-fi
-```
+아래 v1 수집·추가 수집과 체크포인트 비교 절은 기존 작업 참고다. 지금 왼쪽 재녹화에는 위 새 v2 문서를 사용하고, 수집·검수 후 14절의 왼쪽 v2 명령으로 새로 학습한다.
 
 ## 1. 만들려는 동작
 
@@ -187,8 +86,8 @@ fi
 | 왼쪽 본 녹화 | 로컬 66에피소드·37,012프레임 확인. `episode_index=35`는 실패 의심 시연으로 재검수 필요 |
 | 녹화 방향키 | 실제 녹화에 사용 중. 저장·인코딩 중 입력 후 0프레임 저장 오류 발생 이력이 있어 단계 로그를 확인 |
 | 주차 오차·바구니 높이·거리 | 측정·확인 필요 |
-| 서브암(팔로워) 포트 | `/dev/omx_follower` → 현재 `/dev/ttyACM1`, udev 규칙과 USB 일련번호 대응 확인 |
-| 리더암 포트 | `/dev/omx_leader` → 현재 `/dev/ttyACM0`, udev 규칙과 USB 일련번호 대응 확인 |
+| 서브암(팔로워) 포트 | `/dev/serial/by-id/usb-ROBOTIS_OpenRB-150_1B8E02E050323952582E3120FF071F2E-if00` → 현재 `/dev/ttyACM1`, 새 USB 일련번호·모터 ID 읽기로 역할 확인; by-id 직접 사용 |
+| 리더암 포트 | `/dev/serial/by-id/usb-ROBOTIS_OpenRB-150_E743255D50323952582E3120FF07301D-if00` → 현재 `/dev/ttyACM0`, 새 USB 일련번호·모터 ID 읽기로 역할 확인; by-id 직접 사용 |
 | 기존 보정 ID | 서브암 `omx_follower_arm`, 리더암 `omx_leader_arm`. 각 파일의 6개 관절 항목 존재 확인, 현재 장치에서의 보정 적합성은 원격조종 전 확인 필요 |
 | 외장 웹캠 | SNAP U2 → 현재 `/dev/video6`, 뷰 이름 `front` |
 | 서브암 카메라 | Innomaker-U20CAM-720P → 현재 `/dev/video4`, 뷰 이름 `wrist`로 설정. 실제 집기 자세의 구도 확인 필요 |
@@ -255,10 +154,10 @@ python -c 'import torch; print("CUDA:", torch.cuda.is_available()); print("GPU:"
 
 | 역할 | 녹화에 사용할 경로 | 현재 연결 | USB 일련번호 |
 |---|---|---|---|
-| 리더암 | `/dev/omx_leader` | `/dev/ttyACM0` | `F0834A5050323952582E3120FF052040` |
-| 서브암 / 팔로워 | `/dev/omx_follower` | `/dev/ttyACM1` | `72ED7C2850323952582E3120FF07090D` |
+| 리더암 | `/dev/serial/by-id/usb-ROBOTIS_OpenRB-150_E743255D50323952582E3120FF07301D-if00` | `/dev/ttyACM0` | `E743255D50323952582E3120FF07301D` |
+| 서브암 / 팔로워 | `/dev/serial/by-id/usb-ROBOTIS_OpenRB-150_1B8E02E050323952582E3120FF071F2E-if00` | `/dev/ttyACM1` | `1B8E02E050323952582E3120FF071F2E` |
 
-`/etc/udev/rules.d/99-omx.rules`와 실제 심볼릭 링크의 대응이 일치한다. 녹화에서는 연결 순서에 따라 바뀔 수 있는 `ttyACM0/1` 대신 위 별칭을 사용한다. 시리얼 포트를 열거나 모터에 명령을 보내지는 않았다.
+기존 `/etc/udev/rules.d/99-omx.rules`는 이전 팔의 일련번호여서 `/dev/omx_*` 별칭이 생성되지 않는다. 녹화에서는 위 새 장치의 고정 by-id 경로를 직접 사용한다. 2026-10-20 SDK 읽기 점검으로 리더 1~6번·팔로워 11~16번의 모델과 설정을 확인했고 하드웨어 오류는 모두 0이었다. 모터 쓰기·토크 활성화·팔 움직임은 실행하지 않았다.
 
 기존 보정 파일:
 
@@ -299,15 +198,15 @@ wrist: /dev/v4l/by-id/usb-Innomaker_Innomaker-U20CAM-720P_SN0001-video-index0
 HF_USER='chun-hwan'
 PROJECT_DIR='/home/team2/dev_ws/omx_imitation_project'
 
-FOLLOWER_PORT='/dev/omx_follower'
-LEADER_PORT='/dev/omx_leader'
+FOLLOWER_PORT='/dev/serial/by-id/usb-ROBOTIS_OpenRB-150_1B8E02E050323952582E3120FF071F2E-if00'
+LEADER_PORT='/dev/serial/by-id/usb-ROBOTIS_OpenRB-150_E743255D50323952582E3120FF07301D-if00'
 FOLLOWER_ID='omx_follower_arm'
 LEADER_ID='omx_leader_arm'
 CAMERAS='{ front: {type: opencv, index_or_path: "/dev/v4l/by-id/usb-HFSD-231214-J_SNAP_U2-video-index0", width: 640, height: 480, fps: 30, fourcc: MJPG}, wrist: {type: opencv, index_or_path: "/dev/v4l/by-id/usb-Innomaker_Innomaker-U20CAM-720P_SN0001-video-index0", width: 640, height: 480, fps: 30, fourcc: MJPG}}'
 
 TASK_LEFT='Move one item from the cart to the left basket and return to the waiting pose.'
 TASK_RIGHT='Move one item from the cart to the right basket and return to the waiting pose.'
-MODEL_VERSION='v1'
+MODEL_VERSION='v2'
 ```
 
 이번 설정은 외장 카메라 두 대를 사용한다. 로봇에 장착한 카메라만 쓰거나 웹캠만 쓰는 설정으로 중간에 바꾸지 않는다. 구도를 바꿔야 한다면 본 수집 전에 확정하고 이후 녹화와 실행에서 유지한다. 모든 좌우 녹화·평가 명령에는 위와 같은 카메라 경로와 설정을 직접 넣었다.
@@ -419,11 +318,11 @@ PILOT_ROOT="$HOME/.cache/huggingface/lerobot/chun-hwan/omx-unload-left-pilot"
 rm -rf -- "$PILOT_ROOT" && \
 lerobot-record \
   --robot.type=omx_follower \
-  --robot.port=/dev/omx_follower \
+  --robot.port=/dev/serial/by-id/usb-ROBOTIS_OpenRB-150_1B8E02E050323952582E3120FF071F2E-if00 \
   --robot.id=omx_follower_arm \
   --robot.cameras='{ front: {type: opencv, index_or_path: "/dev/v4l/by-id/usb-HFSD-231214-J_SNAP_U2-video-index0", width: 640, height: 480, fps: 30, fourcc: MJPG}, wrist: {type: opencv, index_or_path: "/dev/v4l/by-id/usb-Innomaker_Innomaker-U20CAM-720P_SN0001-video-index0", width: 640, height: 480, fps: 30, fourcc: MJPG}}' \
   --teleop.type=omx_leader \
-  --teleop.port=/dev/omx_leader \
+  --teleop.port=/dev/serial/by-id/usb-ROBOTIS_OpenRB-150_E743255D50323952582E3120FF07301D-if00 \
   --teleop.id=omx_leader_arm \
   --display_data=true \
   --dataset.repo_id=chun-hwan/omx-unload-left-pilot \
@@ -482,11 +381,11 @@ cd /home/team2/il_ws/src/lerobot
 
 lerobot-record \
   --robot.type=omx_follower \
-  --robot.port=/dev/omx_follower \
+  --robot.port=/dev/serial/by-id/usb-ROBOTIS_OpenRB-150_1B8E02E050323952582E3120FF071F2E-if00 \
   --robot.id=omx_follower_arm \
   --robot.cameras='{ front: {type: opencv, index_or_path: "/dev/v4l/by-id/usb-HFSD-231214-J_SNAP_U2-video-index0", width: 640, height: 480, fps: 30, fourcc: MJPG}, wrist: {type: opencv, index_or_path: "/dev/v4l/by-id/usb-Innomaker_Innomaker-U20CAM-720P_SN0001-video-index0", width: 640, height: 480, fps: 30, fourcc: MJPG}}' \
   --teleop.type=omx_leader \
-  --teleop.port=/dev/omx_leader \
+  --teleop.port=/dev/serial/by-id/usb-ROBOTIS_OpenRB-150_E743255D50323952582E3120FF07301D-if00 \
   --teleop.id=omx_leader_arm \
   --display_data=true \
   --dataset.repo_id=chun-hwan/omx-unload-left-v1 \
@@ -511,11 +410,11 @@ cd /home/team2/il_ws/src/lerobot
 
 lerobot-record \
   --robot.type=omx_follower \
-  --robot.port=/dev/omx_follower \
+  --robot.port=/dev/serial/by-id/usb-ROBOTIS_OpenRB-150_1B8E02E050323952582E3120FF071F2E-if00 \
   --robot.id=omx_follower_arm \
   --robot.cameras='{ front: {type: opencv, index_or_path: "/dev/v4l/by-id/usb-HFSD-231214-J_SNAP_U2-video-index0", width: 640, height: 480, fps: 30, fourcc: MJPG}, wrist: {type: opencv, index_or_path: "/dev/v4l/by-id/usb-Innomaker_Innomaker-U20CAM-720P_SN0001-video-index0", width: 640, height: 480, fps: 30, fourcc: MJPG}}' \
   --teleop.type=omx_leader \
-  --teleop.port=/dev/omx_leader \
+  --teleop.port=/dev/serial/by-id/usb-ROBOTIS_OpenRB-150_E743255D50323952582E3120FF07301D-if00 \
   --teleop.id=omx_leader_arm \
   --display_data=true \
   --dataset.repo_id=chun-hwan/omx-unload-right-v1 \
@@ -614,11 +513,11 @@ if [ "$REMAINING_EPISODES" -gt 0 ]; then
   lerobot-record \
     --resume=true \
     --robot.type=omx_follower \
-    --robot.port=/dev/omx_follower \
+    --robot.port=/dev/serial/by-id/usb-ROBOTIS_OpenRB-150_1B8E02E050323952582E3120FF071F2E-if00 \
     --robot.id=omx_follower_arm \
     --robot.cameras='{ front: {type: opencv, index_or_path: "/dev/v4l/by-id/usb-HFSD-231214-J_SNAP_U2-video-index0", width: 640, height: 480, fps: 30, fourcc: MJPG}, wrist: {type: opencv, index_or_path: "/dev/v4l/by-id/usb-Innomaker_Innomaker-U20CAM-720P_SN0001-video-index0", width: 640, height: 480, fps: 30, fourcc: MJPG}}' \
     --teleop.type=omx_leader \
-    --teleop.port=/dev/omx_leader \
+    --teleop.port=/dev/serial/by-id/usb-ROBOTIS_OpenRB-150_E743255D50323952582E3120FF07301D-if00 \
     --teleop.id=omx_leader_arm \
     --display_data=true \
     --dataset.repo_id=chun-hwan/omx-unload-left-v1 \
@@ -656,11 +555,11 @@ if [ "$REMAINING_EPISODES" -gt 0 ]; then
   lerobot-record \
     --resume=true \
     --robot.type=omx_follower \
-    --robot.port=/dev/omx_follower \
+    --robot.port=/dev/serial/by-id/usb-ROBOTIS_OpenRB-150_1B8E02E050323952582E3120FF071F2E-if00 \
     --robot.id=omx_follower_arm \
     --robot.cameras='{ front: {type: opencv, index_or_path: "/dev/v4l/by-id/usb-HFSD-231214-J_SNAP_U2-video-index0", width: 640, height: 480, fps: 30, fourcc: MJPG}, wrist: {type: opencv, index_or_path: "/dev/v4l/by-id/usb-Innomaker_Innomaker-U20CAM-720P_SN0001-video-index0", width: 640, height: 480, fps: 30, fourcc: MJPG}}' \
     --teleop.type=omx_leader \
-    --teleop.port=/dev/omx_leader \
+    --teleop.port=/dev/serial/by-id/usb-ROBOTIS_OpenRB-150_E743255D50323952582E3120FF07301D-if00 \
     --teleop.id=omx_leader_arm \
     --display_data=true \
     --dataset.repo_id=chun-hwan/omx-unload-right-v1 \
@@ -687,11 +586,11 @@ cd /home/team2/il_ws/src/lerobot
 lerobot-record \
   --resume=true \
   --robot.type=omx_follower \
-  --robot.port=/dev/omx_follower \
+  --robot.port=/dev/serial/by-id/usb-ROBOTIS_OpenRB-150_1B8E02E050323952582E3120FF071F2E-if00 \
   --robot.id=omx_follower_arm \
   --robot.cameras='{ front: {type: opencv, index_or_path: "/dev/v4l/by-id/usb-HFSD-231214-J_SNAP_U2-video-index0", width: 640, height: 480, fps: 30, fourcc: MJPG}, wrist: {type: opencv, index_or_path: "/dev/v4l/by-id/usb-Innomaker_Innomaker-U20CAM-720P_SN0001-video-index0", width: 640, height: 480, fps: 30, fourcc: MJPG}}' \
   --teleop.type=omx_leader \
-  --teleop.port=/dev/omx_leader \
+  --teleop.port=/dev/serial/by-id/usb-ROBOTIS_OpenRB-150_E743255D50323952582E3120FF07301D-if00 \
   --teleop.id=omx_leader_arm \
   --display_data=true \
   --dataset.repo_id=chun-hwan/omx-unload-left-v1 \
@@ -713,11 +612,11 @@ cd /home/team2/il_ws/src/lerobot
 lerobot-record \
   --resume=true \
   --robot.type=omx_follower \
-  --robot.port=/dev/omx_follower \
+  --robot.port=/dev/serial/by-id/usb-ROBOTIS_OpenRB-150_1B8E02E050323952582E3120FF071F2E-if00 \
   --robot.id=omx_follower_arm \
   --robot.cameras='{ front: {type: opencv, index_or_path: "/dev/v4l/by-id/usb-HFSD-231214-J_SNAP_U2-video-index0", width: 640, height: 480, fps: 30, fourcc: MJPG}, wrist: {type: opencv, index_or_path: "/dev/v4l/by-id/usb-Innomaker_Innomaker-U20CAM-720P_SN0001-video-index0", width: 640, height: 480, fps: 30, fourcc: MJPG}}' \
   --teleop.type=omx_leader \
-  --teleop.port=/dev/omx_leader \
+  --teleop.port=/dev/serial/by-id/usb-ROBOTIS_OpenRB-150_E743255D50323952582E3120FF07301D-if00 \
   --teleop.id=omx_leader_arm \
   --display_data=true \
   --dataset.repo_id=chun-hwan/omx-unload-right-v1 \
@@ -988,7 +887,7 @@ cd /home/team2/il_ws/src/lerobot
 STEP_PAD="050000"  # 실행할 모델의 스텝: 아래 표의 6자리 값으로 변경
 lerobot-record \
   --robot.type=omx_follower \
-  --robot.port=/dev/omx_follower \
+  --robot.port=/dev/serial/by-id/usb-ROBOTIS_OpenRB-150_1B8E02E050323952582E3120FF071F2E-if00 \
   --robot.id=omx_follower_arm \
   --robot.cameras='{ front: {type: opencv, index_or_path: "/dev/v4l/by-id/usb-HFSD-231214-J_SNAP_U2-video-index0", width: 640, height: 480, fps: 30, fourcc: MJPG}, wrist: {type: opencv, index_or_path: "/dev/v4l/by-id/usb-Innomaker_Innomaker-U20CAM-720P_SN0001-video-index0", width: 640, height: 480, fps: 30, fourcc: MJPG}}' \
   --policy.path="/home/team2/omx_models/omx_left_act_v1/${STEP_PAD}/pretrained_model" \
@@ -1068,7 +967,7 @@ cd /home/team2/il_ws/src/lerobot
 STEP_PAD="100000"  # 실행할 모델의 스텝: 아래 표의 6자리 값으로 변경
 lerobot-record \
   --robot.type=omx_follower \
-  --robot.port=/dev/omx_follower \
+  --robot.port=/dev/serial/by-id/usb-ROBOTIS_OpenRB-150_1B8E02E050323952582E3120FF071F2E-if00 \
   --robot.id=omx_follower_arm \
   --robot.cameras='{ front: {type: opencv, index_or_path: "/dev/v4l/by-id/usb-HFSD-231214-J_SNAP_U2-video-index0", width: 640, height: 480, fps: 30, fourcc: MJPG}, wrist: {type: opencv, index_or_path: "/dev/v4l/by-id/usb-Innomaker_Innomaker-U20CAM-720P_SN0001-video-index0", width: 640, height: 480, fps: 30, fourcc: MJPG}}' \
   --policy.path="/home/team2/omx_models/omx_left_act_v1/${STEP_PAD}/pretrained_model" \
@@ -1096,7 +995,7 @@ cd /home/team2/il_ws/src/lerobot
 
 lerobot-record \
   --robot.type=omx_follower \
-  --robot.port=/dev/omx_follower \
+  --robot.port=/dev/serial/by-id/usb-ROBOTIS_OpenRB-150_1B8E02E050323952582E3120FF071F2E-if00 \
   --robot.id=omx_follower_arm \
   --robot.cameras='{ front: {type: opencv, index_or_path: "/dev/v4l/by-id/usb-HFSD-231214-J_SNAP_U2-video-index0", width: 640, height: 480, fps: 30, fourcc: MJPG}, wrist: {type: opencv, index_or_path: "/dev/v4l/by-id/usb-Innomaker_Innomaker-U20CAM-720P_SN0001-video-index0", width: 640, height: 480, fps: 30, fourcc: MJPG}}' \
   --policy.path=chun-hwan/omx-unload-left-act-v1 \
@@ -1120,7 +1019,7 @@ cd /home/team2/il_ws/src/lerobot
 
 lerobot-record \
   --robot.type=omx_follower \
-  --robot.port=/dev/omx_follower \
+  --robot.port=/dev/serial/by-id/usb-ROBOTIS_OpenRB-150_1B8E02E050323952582E3120FF071F2E-if00 \
   --robot.id=omx_follower_arm \
   --robot.cameras='{ front: {type: opencv, index_or_path: "/dev/v4l/by-id/usb-HFSD-231214-J_SNAP_U2-video-index0", width: 640, height: 480, fps: 30, fourcc: MJPG}, wrist: {type: opencv, index_or_path: "/dev/v4l/by-id/usb-Innomaker_Innomaker-U20CAM-720P_SN0001-video-index0", width: 640, height: 480, fps: 30, fourcc: MJPG}}' \
   --policy.path=chun-hwan/omx-unload-right-act-v1 \
@@ -1149,7 +1048,7 @@ cd /home/team2/il_ws/src/lerobot
 lerobot-record \
   --resume=true \
   --robot.type=omx_follower \
-  --robot.port=/dev/omx_follower \
+  --robot.port=/dev/serial/by-id/usb-ROBOTIS_OpenRB-150_1B8E02E050323952582E3120FF071F2E-if00 \
   --robot.id=omx_follower_arm \
   --robot.cameras='{ front: {type: opencv, index_or_path: "/dev/v4l/by-id/usb-HFSD-231214-J_SNAP_U2-video-index0", width: 640, height: 480, fps: 30, fourcc: MJPG}, wrist: {type: opencv, index_or_path: "/dev/v4l/by-id/usb-Innomaker_Innomaker-U20CAM-720P_SN0001-video-index0", width: 640, height: 480, fps: 30, fourcc: MJPG}}' \
   --policy.path=chun-hwan/omx-unload-left-act-v1 \
@@ -1174,7 +1073,7 @@ cd /home/team2/il_ws/src/lerobot
 lerobot-record \
   --resume=true \
   --robot.type=omx_follower \
-  --robot.port=/dev/omx_follower \
+  --robot.port=/dev/serial/by-id/usb-ROBOTIS_OpenRB-150_1B8E02E050323952582E3120FF071F2E-if00 \
   --robot.id=omx_follower_arm \
   --robot.cameras='{ front: {type: opencv, index_or_path: "/dev/v4l/by-id/usb-HFSD-231214-J_SNAP_U2-video-index0", width: 640, height: 480, fps: 30, fourcc: MJPG}, wrist: {type: opencv, index_or_path: "/dev/v4l/by-id/usb-Innomaker_Innomaker-U20CAM-720P_SN0001-video-index0", width: 640, height: 480, fps: 30, fourcc: MJPG}}' \
   --policy.path=chun-hwan/omx-unload-right-act-v1 \
@@ -1201,7 +1100,7 @@ cd /home/team2/il_ws/src/lerobot
 lerobot-record \
   --resume=true \
   --robot.type=omx_follower \
-  --robot.port=/dev/omx_follower \
+  --robot.port=/dev/serial/by-id/usb-ROBOTIS_OpenRB-150_1B8E02E050323952582E3120FF071F2E-if00 \
   --robot.id=omx_follower_arm \
   --robot.cameras='{ front: {type: opencv, index_or_path: "/dev/v4l/by-id/usb-HFSD-231214-J_SNAP_U2-video-index0", width: 640, height: 480, fps: 30, fourcc: MJPG}, wrist: {type: opencv, index_or_path: "/dev/v4l/by-id/usb-Innomaker_Innomaker-U20CAM-720P_SN0001-video-index0", width: 640, height: 480, fps: 30, fourcc: MJPG}}' \
   --policy.path=chun-hwan/omx-unload-left-act-v2 \
@@ -1228,7 +1127,7 @@ cd /home/team2/il_ws/src/lerobot
 lerobot-record \
   --resume=true \
   --robot.type=omx_follower \
-  --robot.port=/dev/omx_follower \
+  --robot.port=/dev/serial/by-id/usb-ROBOTIS_OpenRB-150_1B8E02E050323952582E3120FF071F2E-if00 \
   --robot.id=omx_follower_arm \
   --robot.cameras='{ front: {type: opencv, index_or_path: "/dev/v4l/by-id/usb-HFSD-231214-J_SNAP_U2-video-index0", width: 640, height: 480, fps: 30, fourcc: MJPG}, wrist: {type: opencv, index_or_path: "/dev/v4l/by-id/usb-Innomaker_Innomaker-U20CAM-720P_SN0001-video-index0", width: 640, height: 480, fps: 30, fourcc: MJPG}}' \
   --policy.path=chun-hwan/omx-unload-right-act-v2 \
@@ -1266,7 +1165,7 @@ cd /home/team2/il_ws/src/lerobot
 lerobot-record \
   --resume=true \
   --robot.type=omx_follower \
-  --robot.port=/dev/omx_follower \
+  --robot.port=/dev/serial/by-id/usb-ROBOTIS_OpenRB-150_1B8E02E050323952582E3120FF071F2E-if00 \
   --robot.id=omx_follower_arm \
   --robot.cameras='{ front: {type: opencv, index_or_path: "/dev/v4l/by-id/usb-HFSD-231214-J_SNAP_U2-video-index0", width: 640, height: 480, fps: 30, fourcc: MJPG}, wrist: {type: opencv, index_or_path: "/dev/v4l/by-id/usb-Innomaker_Innomaker-U20CAM-720P_SN0001-video-index0", width: 640, height: 480, fps: 30, fourcc: MJPG}}' \
   --policy.path=chun-hwan/omx-unload-left-act-v1 \
@@ -1293,7 +1192,7 @@ cd /home/team2/il_ws/src/lerobot
 lerobot-record \
   --resume=true \
   --robot.type=omx_follower \
-  --robot.port=/dev/omx_follower \
+  --robot.port=/dev/serial/by-id/usb-ROBOTIS_OpenRB-150_1B8E02E050323952582E3120FF071F2E-if00 \
   --robot.id=omx_follower_arm \
   --robot.cameras='{ front: {type: opencv, index_or_path: "/dev/v4l/by-id/usb-HFSD-231214-J_SNAP_U2-video-index0", width: 640, height: 480, fps: 30, fourcc: MJPG}, wrist: {type: opencv, index_or_path: "/dev/v4l/by-id/usb-Innomaker_Innomaker-U20CAM-720P_SN0001-video-index0", width: 640, height: 480, fps: 30, fourcc: MJPG}}' \
   --policy.path=chun-hwan/omx-unload-right-act-v1 \
@@ -1320,7 +1219,7 @@ cd /home/team2/il_ws/src/lerobot
 lerobot-record \
   --resume=true \
   --robot.type=omx_follower \
-  --robot.port=/dev/omx_follower \
+  --robot.port=/dev/serial/by-id/usb-ROBOTIS_OpenRB-150_1B8E02E050323952582E3120FF071F2E-if00 \
   --robot.id=omx_follower_arm \
   --robot.cameras='{ front: {type: opencv, index_or_path: "/dev/v4l/by-id/usb-HFSD-231214-J_SNAP_U2-video-index0", width: 640, height: 480, fps: 30, fourcc: MJPG}, wrist: {type: opencv, index_or_path: "/dev/v4l/by-id/usb-Innomaker_Innomaker-U20CAM-720P_SN0001-video-index0", width: 640, height: 480, fps: 30, fourcc: MJPG}}' \
   --policy.path=chun-hwan/omx-unload-left-act-v2 \
@@ -1347,7 +1246,7 @@ cd /home/team2/il_ws/src/lerobot
 lerobot-record \
   --resume=true \
   --robot.type=omx_follower \
-  --robot.port=/dev/omx_follower \
+  --robot.port=/dev/serial/by-id/usb-ROBOTIS_OpenRB-150_1B8E02E050323952582E3120FF071F2E-if00 \
   --robot.id=omx_follower_arm \
   --robot.cameras='{ front: {type: opencv, index_or_path: "/dev/v4l/by-id/usb-HFSD-231214-J_SNAP_U2-video-index0", width: 640, height: 480, fps: 30, fourcc: MJPG}, wrist: {type: opencv, index_or_path: "/dev/v4l/by-id/usb-Innomaker_Innomaker-U20CAM-720P_SN0001-video-index0", width: 640, height: 480, fps: 30, fourcc: MJPG}}' \
   --policy.path=chun-hwan/omx-unload-right-act-v2 \
