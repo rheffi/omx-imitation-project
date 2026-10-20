@@ -821,7 +821,7 @@ lerobot-train \
 └── 100000/pretrained_model/
 ```
 
-`pretrained_model`에는 가중치 하나만 넣지 않고 `config.json`, `model.safetensors`, `train_config.json`, 전처리·후처리 JSON과 각각의 정규화 가중치까지 **7개 파일**을 함께 둔다. 현재까지 정리·검증한 모델은 1만·4만·5만 스텝이다. 이 문서 수정에서 다른 모델의 다운로드나 검증, 팔 실행을 완료한 것으로 표시하지 않는다.
+`pretrained_model`에는 가중치 하나만 넣지 않고 `config.json`, `model.safetensors`, `train_config.json`, 전처리·후처리 JSON과 각각의 정규화 가중치까지 **7개 파일**을 함께 둔다. 현재까지 정리·검증한 모델은 1만·4만·5만·7만·8만 스텝이다. 7만·8만 모델은 각각 `070000/pretrained_model`, `080000/pretrained_model`에 보관했으며, 두 모델의 7개 파일·프로세서 참조·가중치 형식을 확인했다. 두 모델의 가중치는 서로 다르고, 원본 ZIP은 다운로드 폴더에 유지한다. 이 문서 수정에서 다른 모델의 다운로드나 검증, 팔 실행을 완료한 것으로 표시하지 않는다.
 
 ### 비교 전에 카메라와 물건 배치 고정
 
