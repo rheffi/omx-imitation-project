@@ -807,6 +807,64 @@ lerobot-train \
 
 강의와 현재 설치본에 맞춰 `lerobot-record`에 `--policy.path`를 추가하는 평가 방식을 사용한다. 최신 문서의 다른 실행 명령과 섞지 않는다. 평가 데이터셋 이름은 `eval_`로 시작해야 한다.
 
+### 로컬 5만 스텝 모델 평가 — 한 개 먼저
+
+다운로드한 `omx_left_act_step050000.zip`은 다음 경로에 압축을 풀어 정리했다. 기존 1만·4만 스텝 모델과 원본 ZIP은 그대로 보관한다. 5만 스텝 모델의 7개 파일, JSON 설정, 프로세서의 정규화 파일 참조, 가중치 형식을 확인했고, 4만 스텝 모델과 가중치가 다른 것도 확인했다. 실제 팔 평가는 이 정리 작업에서 실행하지 않았다.
+
+```text
+/home/team2/omx_models/omx_left_act_v1/050000/pretrained_model/
+```
+
+아래는 HF의 최종 모델 대신 현재 노트북에 받은 5만 스텝 체크포인트를 실행하는 전체 명령이다. 평가 저장소 이름은 실행 시각을 붙여 기존 평가 폴더와 충돌하지 않게 한다.
+
+```bash
+source /home/team2/venv/il/bin/activate
+cd /home/team2/il_ws/src/lerobot
+
+lerobot-record \
+  --robot.type=omx_follower \
+  --robot.port=/dev/omx_follower \
+  --robot.id=omx_follower_arm \
+  --robot.cameras='{ front: {type: opencv, index_or_path: "/dev/v4l/by-id/usb-HFSD-231214-J_SNAP_U2-video-index0", width: 640, height: 480, fps: 30, fourcc: MJPG}, wrist: {type: opencv, index_or_path: "/dev/v4l/by-id/usb-Innomaker_Innomaker-U20CAM-720P_SN0001-video-index0", width: 640, height: 480, fps: 30, fourcc: MJPG}}' \
+  --policy.path=/home/team2/omx_models/omx_left_act_v1/050000/pretrained_model \
+  --policy.device=cuda \
+  --display_data=true \
+  --dataset.repo_id="chun-hwan/eval_omx_left_s050000_$(date +%Y%m%d_%H%M%S)" \
+  --dataset.single_task="Move one item from the cart to the left basket and return to the waiting pose." \
+  --dataset.fps=30 \
+  --dataset.num_episodes=1 \
+  --dataset.episode_time_s=30 \
+  --dataset.reset_time_s=60 \
+  --dataset.push_to_hub=false \
+  --dataset.private=true
+```
+
+### 로컬 5만 스텝 모델 평가 — 카트의 물건 3개
+
+한 번 옮기기가 확인된 뒤 아래 블록으로 3에피소드를 실행한다. 물건을 놓고 대기 자세로 복귀하면 `→`, 준비 단계에서 남은 물건을 그대로 둔 채 `→`로 다음 녹화를 시작한다. 카트는 3→2→1→0으로 비우며 중간에 다시 채우지 않는다. 저장·인코딩 중에는 방향키를 누르지 않는다.
+
+```bash
+source /home/team2/venv/il/bin/activate
+cd /home/team2/il_ws/src/lerobot
+
+lerobot-record \
+  --robot.type=omx_follower \
+  --robot.port=/dev/omx_follower \
+  --robot.id=omx_follower_arm \
+  --robot.cameras='{ front: {type: opencv, index_or_path: "/dev/v4l/by-id/usb-HFSD-231214-J_SNAP_U2-video-index0", width: 640, height: 480, fps: 30, fourcc: MJPG}, wrist: {type: opencv, index_or_path: "/dev/v4l/by-id/usb-Innomaker_Innomaker-U20CAM-720P_SN0001-video-index0", width: 640, height: 480, fps: 30, fourcc: MJPG}}' \
+  --policy.path=/home/team2/omx_models/omx_left_act_v1/050000/pretrained_model \
+  --policy.device=cuda \
+  --display_data=true \
+  --dataset.repo_id="chun-hwan/eval_omx_left_s050000_cart_$(date +%Y%m%d_%H%M%S)" \
+  --dataset.single_task="Move one item from the cart to the left basket and return to the waiting pose." \
+  --dataset.fps=30 \
+  --dataset.num_episodes=3 \
+  --dataset.episode_time_s=30 \
+  --dataset.reset_time_s=60 \
+  --dataset.push_to_hub=false \
+  --dataset.private=true
+```
+
 ### 로컬 4만 스텝 모델 평가 — 한 개 먼저
 
 다운로드한 `omx_left_act_step040000.zip`은 다음 경로에 압축을 풀어 정리했다. 1만 스텝 모델은 `010000`에 별도로 보관한다. 4만 스텝 모델의 7개 파일과 가중치 형식을 확인했고, 1만 스텝 모델과 가중치가 다른 것도 확인했다. 실제 팔 평가는 이 정리 작업에서 실행하지 않았다.
