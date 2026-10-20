@@ -15,6 +15,24 @@
 
 모델·녹화 데이터는 Git 저장소 밖에 있고 문서만 Git으로 전달한다. 다른 컴퓨터에서 평가하려면 해당 `pretrained_model` 폴더의 7개 파일도 함께 옮긴다.
 
+### 정면 카메라 구도 복원 — 반투명 비교
+
+왼쪽 v2 본 녹화의 첫 프레임 부근을 기준으로 기존 영상 40%·실시간 영상 60%를 겹친다. 녹화·원격조종·다른 미리보기를 종료한 뒤 아래 전체 명령을 실행한다. 로봇 베이스·선반 모서리·바구니 테두리가 겹치도록 맞추고 고정한다. 팔은 자세가 다를 수 있으므로 고정된 부분을 기준으로 비교한다. 종료는 `q`다.
+
+```bash
+ffplay -hide_banner -loglevel error \
+  -window_title "OMX v2 alignment - reference 40%, live 60%" \
+  -f v4l2 \
+  -input_format mjpeg \
+  -video_size 640x480 \
+  -framerate 30 \
+  -i /dev/v4l/by-id/usb-HFSD-231214-J_SNAP_U2-video-index0 \
+  -filter_threads 1 \
+  -vf "movie=/home/team2/dev_ws/omx_imitation_project/camera_reference/front_left_v2_ep000000.png[ref];[in][ref]blend=all_expr='A*0.6+B*0.4'[out]"
+```
+
+기준 이미지는 `camera_reference/front_left_v2_ep000000.png`다. README 15절의 v1용 기준 이미지와 구분한다.
+
 ## 2. 먼저 한 에피소드 확인
 
 카메라 미리보기·원격조종·다른 평가를 종료하고, 수집 때와 같은 카메라 구도·카트·왼쪽 바구니·대기 자세를 준비한다. 물건 하나를 옮기는 동작부터 감독하며 확인한다. 아래 블록은 **실제 팔이 정책대로 움직이는 평가 명령**이다.
